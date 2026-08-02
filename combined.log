@@ -176,3 +176,15 @@
 {"level":"warn","message":"GET /api/auth/refresh 401 — Not authorized, no refresh token","timestamp":"2026-07-31T20:34:48.497Z"}
 {"level":"warn","message":"GET /api/auth/refresh 401 — Not authorized, no refresh token","timestamp":"2026-08-01T06:23:49.076Z"}
 {"level":"warn","message":"GET /api/auth/refresh 403 — Forbidden","timestamp":"2026-08-01T08:24:17.188Z"}
+{"level":"warn","message":"GET /api/auth/refresh 401 — Not authorized, no refresh token","timestamp":"2026-08-01T21:27:56.336Z"}
+{"level":"warn","message":"GET /api/auth/refresh 401 — Not authorized, no refresh token","timestamp":"2026-08-01T21:27:58.327Z"}
+{"level":"warn","message":"GET /api/auth/refresh 401 — Not authorized, no refresh token","timestamp":"2026-08-01T21:28:17.930Z"}
+{"level":"warn","message":"GET /api/auth/refresh 401 — Not authorized, no refresh token","timestamp":"2026-08-01T21:28:42.899Z"}
+{"level":"warn","message":"GET /api/auth/refresh 401 — Not authorized, no refresh token","timestamp":"2026-08-01T21:29:38.067Z"}
+{"level":"warn","message":"GET /api/auth/refresh 403 — Forbidden","timestamp":"2026-08-02T06:28:17.809Z"}
+{"level":"warn","message":"GET /api/auth/refresh 401 — Not authorized, no refresh token","timestamp":"2026-08-02T07:12:56.885Z"}
+{"level":"warn","message":"GET /api/auth/refresh 401 — Not authorized, no refresh token","timestamp":"2026-08-02T07:15:16.925Z"}
+{"level":"warn","message":"GET /api/auth/refresh 401 — Not authorized, no refresh token","timestamp":"2026-08-02T07:15:24.051Z"}
+{"level":"warn","message":"GET /api/auth/refresh 401 — Not authorized, no refresh token","timestamp":"2026-08-02T07:23:58.445Z"}
+{"level":"warn","message":"GET /api/auth/refresh 401 — Not authorized, no refresh token","timestamp":"2026-08-02T07:31:56.498Z"}
+{"level":"warn","message":"GET /api/auth/refresh 401 — Not authorized, no refresh token","timestamp":"2026-08-02T07:48:59.128Z"}
