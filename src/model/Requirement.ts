@@ -13,9 +13,6 @@ export type RequirementStatus = (typeof REQUIREMENT_STATUSES)[number];
  */
 export interface IRequirement extends Document {
   _id: Types.ObjectId;
-  district?: string;
-  revenueCircle?: string;
-  villageName?: string;
   items: RequirementItem[];
   message: string;
   phoneNumber: string;
@@ -38,9 +35,6 @@ export interface IRequirement extends Document {
 
 const RequirementSchema = new Schema<IRequirement>(
   {
-    district: { type: String, trim: true, index: true },
-    revenueCircle: { type: String, trim: true },
-    villageName: { type: String, trim: true },
     items: { type: [String], enum: REQUIREMENT_ITEMS, default: [] },
     message: { type: String, trim: true, maxlength: 2000 },
     phoneNumber: {

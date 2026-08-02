@@ -21,9 +21,6 @@ const sanitizeItems = (input: unknown): RequirementItem[] => {
 export const createRequirement = asyncHandler(
   async (req: Request, res: Response) => {
     const {
-      district,
-      revenueCircle,
-      villageName,
       items: rawItems,
       message,
       phoneNumber,
@@ -45,20 +42,14 @@ export const createRequirement = asyncHandler(
     }
 
     const hasCoords = typeof lat === "number" && typeof lng === "number";
-    if (!district && !hasCoords) {
-      throw new ErrorResponse(
-        "Provide a district or use your current location",
-        400,
-      );
+    if (!hasCoords) {
+      throw new ErrorResponse("Provide your location", 400);
     }
 
     const provider = await User.findById(req.user!.id);
     if (!provider) throw new ErrorResponse("Provider not found", 404);
 
     const requirement = await Requirement.create({
-      ...(district ? { district } : {}),
-      ...(revenueCircle ? { revenueCircle } : {}),
-      ...(villageName ? { villageName } : {}),
       items,
       ...(trimmedMessage ? { message: trimmedMessage } : {}),
       phoneNumber: String(phoneNumber).trim(),
@@ -148,9 +139,6 @@ export const updateRequirement = asyncHandler(
     }
 
     const {
-      district,
-      revenueCircle,
-      villageName,
       items: rawItems,
       message,
       phoneNumber,
@@ -159,9 +147,6 @@ export const updateRequirement = asyncHandler(
       lng,
     } = req.body;
 
-    if (district !== undefined) requirement.district = district;
-    if (revenueCircle !== undefined) requirement.revenueCircle = revenueCircle;
-    if (villageName !== undefined) requirement.villageName = villageName;
     if (rawItems !== undefined) requirement.items = sanitizeItems(rawItems);
     if (message !== undefined) {
       requirement.message = String(message).trim();
