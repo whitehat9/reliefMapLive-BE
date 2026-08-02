@@ -26,6 +26,11 @@ dotenv.config();
 const app: Application = express();
 const PORT = process.env.PORT || 8080;
 
+// Behind Cloud Run's proxy: trust the first proxy hop so req.secure reflects the
+// original HTTPS request and the rate limiter keys off the real client IP
+// (X-Forwarded-For) rather than the proxy's.
+app.set("trust proxy", 1);
+
 //CORS
 app.use(cors(corsOptions));
 app.use(cookieParser());

@@ -8,18 +8,42 @@ import { verifyFirebaseIdToken } from "../config/firebaseAdmin.js";
 import { fromFirebasePhoneNumber } from "../utils/phone.js";
 
 const REFRESH_COOKIE = "jwt";
-const REFRESH_COOKIE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7d, matches JWT_REFRESH_EXPIRES
+const REFRESH_COOKIE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30d, matches JWT_REFRESH_EXPIRES
 
 /**
- * Cookie flags for the refresh token. `sameSite:"lax"` in dev so the
- * localhost:5173 → localhost:8080 fetch still carries the cookie; `"none"`
- * + secure in production where client and API may live on different domains.
+ * Cookie flags for the refresh token.
+ *
+ * The default (no `COOKIE_DOMAIN`) keeps the legacy behavior: `sameSite:"lax"`
+ * in dev so the localhost:5173 → localhost:8080 fetch still carries the cookie,
+ * and cross-site `"none"` + secure in production.
+ *
+ * When `COOKIE_DOMAIN` is set (e.g. `.reliefmap.live`), the client and API live
+ * on the same site (`reliefmap.live` ↔ `api.reliefmap.live`), so the cookie is
+ * scoped to the parent domain and sent as `sameSite:"lax"`. That makes it a
+ * genuine first-party cookie — immune to the third-party-cookie blocking
+ * (Chrome/Safari/Firefox) that otherwise drops the cross-site refresh cookie
+ * and breaks silent re-auth. Same-site subdomains still send Lax cookies on
+ * cross-origin fetches, so silent refresh keeps working.
  */
-const refreshCookieOptions = (): CookieOptions => ({
-  httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
-  sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-});
+const refreshCookieOptions = (): CookieOptions => {
+  const cookieDomain = process.env.COOKIE_DOMAIN;
+  const isProd = process.env.NODE_ENV === "production";
+
+  if (cookieDomain) {
+    return {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: "lax",
+      domain: cookieDomain,
+    };
+  }
+
+  return {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? "none" : "lax",
+  };
+};
 
 /** Serialize a user for API responses (never leak refresh tokens/firebaseUid). */
 const publicUser = (user: IUser) => ({

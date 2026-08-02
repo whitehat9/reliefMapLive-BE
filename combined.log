@@ -190,3 +190,4 @@
 {"level":"warn","message":"GET /api/auth/refresh 401 — Not authorized, no refresh token","timestamp":"2026-08-02T07:48:59.128Z"}
 {"level":"warn","message":"GET /api/auth/refresh 401 — Not authorized, no refresh token","timestamp":"2026-08-02T10:13:09.993Z"}
 {"level":"warn","message":"GET /api/auth/refresh 401 — Not authorized, no refresh token","timestamp":"2026-08-02T10:14:54.988Z"}
+{"level":"warn","message":"GET /api/auth/refresh 401 — Not authorized, no refresh token","timestamp":"2026-08-02T11:12:41.771Z"}

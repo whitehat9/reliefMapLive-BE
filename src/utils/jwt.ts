@@ -47,7 +47,7 @@ export const generateRefreshToken = (payload: object): string => {
   try {
     const options: SignOptions = {
       expiresIn: (process.env.JWT_REFRESH_EXPIRES ||
-        "7d") as NonNullable<SignOptions["expiresIn"]>,
+        "30d") as NonNullable<SignOptions["expiresIn"]>,
       // Unique per token so two sessions minted in the same second (multi-device
       // login, or rapid rotation) never collide into an identical string.
       jwtid: crypto.randomUUID(),
