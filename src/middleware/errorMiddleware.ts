@@ -54,8 +54,8 @@ export const errorHandler = (
     normalizedStatusCode ?? (res.statusCode === 200 ? 500 : res.statusCode);
 
   // 5xx are real server-side faults — log the full stack. 4xx are expected
-  // client errors (e.g. an unauthenticated visitor hitting /auth/refresh with
-  // no cookie, validation failures, 404s); log a concise warning, no stack.
+  // client errors (e.g. an expired/missing Bearer token, validation failures,
+  // 404s); log a concise warning, no stack.
   if (statusCode >= 500) {
     logger.error(err.stack ?? err.message);
   } else {

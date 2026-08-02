@@ -5,7 +5,6 @@ import {
   login,
   logout,
   getMe,
-  refresh,
 } from "../controllers/authController.js";
 import { protect } from "../middleware/authMiddleware.js";
 
@@ -20,9 +19,7 @@ if (process.env.NODE_ENV === "development") {
 // already completed before hitting the server.
 router.post("/signup", signup);
 router.post("/login", login);
-// Refresh & logout authenticate via the httpOnly refresh cookie, not the
-// (possibly expired) access token — so no `protect` here.
-router.get("/refresh", refresh);
+// Logout is a stateless no-op (the client just discards its token) — public.
 router.post("/logout", logout);
 router.get("/me", protect, getMe);
 

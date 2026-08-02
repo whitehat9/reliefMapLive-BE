@@ -5,7 +5,7 @@ import { ErrorResponse } from "../utils/errorResponse.js";
 import User, { type UserRole } from "../model/User.js";
 
 /**
- * Verify the JWT (from an httpOnly cookie or a Bearer header), confirm the user
+ * Verify the JWT from the `Authorization: Bearer` header, confirm the user
  * still exists and is enabled, and attach `req.user`.
  */
 export const protect = asyncHandler(
@@ -15,8 +15,6 @@ export const protect = asyncHandler(
     const authHeader = req.headers.authorization;
     if (authHeader?.startsWith("Bearer ")) {
       token = authHeader.split(" ")[1];
-    } else if (req.cookies?.token) {
-      token = req.cookies.token as string;
     }
 
     if (!token) {
@@ -24,8 +22,8 @@ export const protect = asyncHandler(
     }
 
     // A malformed/expired token must surface as 401 (not the raw jwt throw,
-    // which the error handler would turn into a 500) so the client's silent
-    // refresh in `baseQueryWithReauth` kicks in and replays the request.
+    // which the error handler would turn into a 500) so the client can clear
+    // its stale session and route the user back to login.
     let decoded;
     try {
       decoded = verifyToken(token);

@@ -4,7 +4,6 @@ import express, {
   type Response,
 } from "express";
 import cors from "cors";
-import cookieParser from "cookie-parser";
 
 import dotenv from "dotenv";
 import rateLimit from "express-rate-limit";
@@ -33,7 +32,6 @@ app.set("trust proxy", 1);
 
 //CORS
 app.use(cors(corsOptions));
-app.use(cookieParser());
 
 // Body Parsers
 app.use(express.json());

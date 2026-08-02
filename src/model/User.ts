@@ -17,10 +17,6 @@ export interface IUser extends Document {
   // Provider-only: street/postal address of the provider or their organization.
   address?: string;
 
-  // Active refresh tokens — one per logged-in device/session. Used for
-  // refresh-token rotation and reuse detection; never exposed to clients.
-  refreshTokens: string[];
-
   // Provider-only
   organizationName?: string;
 
@@ -56,10 +52,6 @@ const UserSchema = new Schema<IUser>(
       type: String,
       unique: true,
       sparse: true,
-    },
-    refreshTokens: {
-      type: [String],
-      default: [],
     },
     organizationName: {
       type: String,

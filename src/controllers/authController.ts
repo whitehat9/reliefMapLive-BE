@@ -1,51 +1,11 @@
-import type { CookieOptions, Request, Response } from "express";
-import type { JwtPayload } from "jsonwebtoken";
+import type { Request, Response } from "express";
 import asyncHandler from "express-async-handler";
 import User, { type IUser } from "../model/User.js";
 import { ErrorResponse } from "../utils/errorResponse.js";
-import { generateRefreshToken, verifyRefreshToken } from "../utils/jwt.js";
 import { verifyFirebaseIdToken } from "../config/firebaseAdmin.js";
 import { fromFirebasePhoneNumber } from "../utils/phone.js";
 
-const REFRESH_COOKIE = "jwt";
-const REFRESH_COOKIE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30d, matches JWT_REFRESH_EXPIRES
-
-/**
- * Cookie flags for the refresh token.
- *
- * The default (no `COOKIE_DOMAIN`) keeps the legacy behavior: `sameSite:"lax"`
- * in dev so the localhost:5173 → localhost:8080 fetch still carries the cookie,
- * and cross-site `"none"` + secure in production.
- *
- * When `COOKIE_DOMAIN` is set (e.g. `.reliefmap.live`), the client and API live
- * on the same site (`reliefmap.live` ↔ `api.reliefmap.live`), so the cookie is
- * scoped to the parent domain and sent as `sameSite:"lax"`. That makes it a
- * genuine first-party cookie — immune to the third-party-cookie blocking
- * (Chrome/Safari/Firefox) that otherwise drops the cross-site refresh cookie
- * and breaks silent re-auth. Same-site subdomains still send Lax cookies on
- * cross-origin fetches, so silent refresh keeps working.
- */
-const refreshCookieOptions = (): CookieOptions => {
-  const cookieDomain = process.env.COOKIE_DOMAIN;
-  const isProd = process.env.NODE_ENV === "production";
-
-  if (cookieDomain) {
-    return {
-      httpOnly: true,
-      secure: isProd,
-      sameSite: "lax",
-      domain: cookieDomain,
-    };
-  }
-
-  return {
-    httpOnly: true,
-    secure: isProd,
-    sameSite: isProd ? "none" : "lax",
-  };
-};
-
-/** Serialize a user for API responses (never leak refresh tokens/firebaseUid). */
+/** Serialize a user for API responses (never leak firebaseUid). */
 const publicUser = (user: IUser) => ({
   id: String(user._id),
   name: user.name,
@@ -55,17 +15,6 @@ const publicUser = (user: IUser) => ({
   address: user.address,
   isDisabled: user.isDisabled,
 });
-
-const setRefreshCookie = (res: Response, refreshToken: string) => {
-  res.cookie(REFRESH_COOKIE, refreshToken, {
-    ...refreshCookieOptions(),
-    maxAge: REFRESH_COOKIE_MAX_AGE_MS,
-  });
-};
-
-const clearRefreshCookie = (res: Response) => {
-  res.clearCookie(REFRESH_COOKIE, refreshCookieOptions());
-};
 
 /**
  * Verify a Firebase phone-auth ID token and return the caller's verified
@@ -91,45 +40,17 @@ const verifyPhoneToken = async (
 };
 
 /**
- * Issue a fresh session: a short-lived access token in the body and a rotated
- * refresh token in an httpOnly cookie. Persists the refresh token in the user's
- * array so multiple devices can each hold an independent session.
- *
- * On login the browser may still carry an old refresh cookie — we drop it from
- * the array (rotation) and, if it belongs to no one, treat it as reuse and wipe
- * every session for this user before granting the new one.
+ * Issue a session: a single long-lived JWT (see JWT_ACCESS_EXPIRES, 30d) in the
+ * response body. There is no refresh token or cookie — the client persists this
+ * token and sends it as `Authorization: Bearer`. Access is still revocable
+ * server-side: `protect` reloads the user and rejects `isDisabled` on every
+ * request, so disabling an account cuts off its token immediately.
  */
-const issueSession = async (
-  user: IUser,
-  statusCode: number,
-  req: Request,
-  res: Response,
-) => {
-  const accessToken = user.getSignedJwtToken();
-  const newRefreshToken = generateRefreshToken({ id: user._id });
-
-  const incoming = req.cookies?.[REFRESH_COOKIE] as string | undefined;
-  let retained = user.refreshTokens;
-
-  if (incoming) {
-    retained = user.refreshTokens.filter((rt) => rt !== incoming);
-
-    // Reuse detection at login: the cookie is present but no user holds it,
-    // so it was already rotated away — invalidate all existing sessions.
-    const stillValid = await User.findOne({ refreshTokens: incoming });
-    if (!stillValid) {
-      retained = [];
-    }
-    clearRefreshCookie(res);
-  }
-
-  user.refreshTokens = [...retained, newRefreshToken];
-  await user.save();
-
-  setRefreshCookie(res, newRefreshToken);
+const issueSession = (user: IUser, statusCode: number, res: Response) => {
+  const token = user.getSignedJwtToken();
   res
     .status(statusCode)
-    .json({ success: true, token: accessToken, user: publicUser(user) });
+    .json({ success: true, token, user: publicUser(user) });
 };
 
 /**
@@ -164,7 +85,7 @@ export const signup = asyncHandler(async (req: Request, res: Response) => {
     firebaseUid: uid,
   });
 
-  await issueSession(user, 201, req, res);
+  issueSession(user, 201, res);
 });
 
 /**
@@ -205,75 +126,10 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
     throw new ErrorResponse("Invalid credentials", 401);
   }
 
-  await issueSession(user, 200, req, res);
-});
+  // firebaseUid may have just been bound on first login — persist it.
+  await user.save();
 
-/**
- * @desc    Exchange a valid refresh-token cookie for a new access token,
- *          rotating the refresh token in the process. Detects reuse of an
- *          already-rotated token and invalidates every session for that user.
- * @route   GET /api/auth/refresh
- * @access  Public (the access token may be expired)
- */
-export const refresh = asyncHandler(async (req: Request, res: Response) => {
-  const token = req.cookies?.[REFRESH_COOKIE] as string | undefined;
-  if (!token) {
-    throw new ErrorResponse("Not authorized, no refresh token", 401);
-  }
-
-  // The presented token is spent regardless of outcome — always clear it.
-  clearRefreshCookie(res);
-
-  const foundUser = await User.findOne({ refreshTokens: token });
-
-  // Reuse detection: a well-formed token that no user still holds was already
-  // rotated away (or stolen). Nuke every session for whoever it points at.
-  if (!foundUser) {
-    let decoded: JwtPayload;
-    try {
-      decoded = verifyRefreshToken(token);
-    } catch {
-      throw new ErrorResponse("Forbidden", 403);
-    }
-    const compromised = await User.findById(decoded.id);
-    if (compromised) {
-      compromised.refreshTokens = [];
-      await compromised.save();
-    }
-    throw new ErrorResponse("Forbidden", 403);
-  }
-
-  // Retire the presented token from this user's device list.
-  const retained = foundUser.refreshTokens.filter((rt) => rt !== token);
-
-  let decoded: JwtPayload;
-  try {
-    decoded = verifyRefreshToken(token);
-  } catch {
-    // Legitimately ours but expired/invalid — just drop it, no rotation.
-    foundUser.refreshTokens = retained;
-    await foundUser.save();
-    throw new ErrorResponse("Forbidden", 403);
-  }
-
-  if (decoded.id !== String(foundUser._id)) {
-    throw new ErrorResponse("Forbidden", 403);
-  }
-  if (foundUser.isDisabled) {
-    throw new ErrorResponse("Your account has been disabled", 403);
-  }
-
-  // Rotate: mint a new refresh token, leaving every other device untouched.
-  const newRefreshToken = generateRefreshToken({ id: foundUser._id });
-  foundUser.refreshTokens = [...retained, newRefreshToken];
-  await foundUser.save();
-
-  setRefreshCookie(res, newRefreshToken);
-  res.status(200).json({
-    success: true,
-    token: foundUser.getSignedJwtToken(),
-    user: publicUser(foundUser),
-  });
+  issueSession(user, 200, res);
 });
 
 /**
@@ -290,28 +146,12 @@ export const getMe = asyncHandler(async (req: Request, res: Response) => {
 });
 
 /**
- * @desc    Log out this device — remove its refresh token and clear the cookie.
- *          Authenticated by the refresh cookie, so it works even once the
- *          access token has expired.
+ * @desc    Log out. With no server-side session state (the JWT is stateless and
+ *          held only by the client), this is a no-op the client calls before
+ *          discarding its token — kept for API compatibility.
  * @route   POST /api/auth/logout
  * @access  Public
  */
-export const logout = asyncHandler(async (req: Request, res: Response) => {
-  const token = req.cookies?.[REFRESH_COOKIE] as string | undefined;
-
-  if (!token) {
-    res.sendStatus(204);
-    return;
-  }
-
-  const foundUser = await User.findOne({ refreshTokens: token });
-  if (foundUser) {
-    foundUser.refreshTokens = foundUser.refreshTokens.filter(
-      (rt) => rt !== token,
-    );
-    await foundUser.save();
-  }
-
-  clearRefreshCookie(res);
+export const logout = asyncHandler(async (_req: Request, res: Response) => {
   res.status(200).json({ success: true, message: "Logged out" });
 });
