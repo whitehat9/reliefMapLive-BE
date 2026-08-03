@@ -79,7 +79,12 @@ export type RequirementItem = (typeof REQUIREMENT_ITEMS)[number];
  * Road-condition report types for the map's "Zeng layer" — anonymous,
  * public-submitted markers distinct from Provider relief drops (`Marker`).
  */
-export const ZENG_MARKER_TYPES = ["boat", "tractor", "broken_embankment"] as const;
+export const ZENG_MARKER_TYPES = [
+  "boat",
+  "tractor",
+  "jcb",
+  "broken_embankment",
+] as const;
 export type ZengMarkerType = (typeof ZENG_MARKER_TYPES)[number];
 
 /**

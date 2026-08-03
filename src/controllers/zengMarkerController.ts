@@ -8,7 +8,7 @@ const isZengMarkerType = (v: unknown): v is ZengMarkerType =>
   typeof v === "string" && (ZENG_MARKER_TYPES as readonly string[]).includes(v);
 
 /**
- * @desc    Road-condition reports for the map's "Zeng layer" (boat / tractor
+ * @desc    Road-condition reports for the map's "Zeng layer" (boat / tractor / JCB
  *          / broken embankment).
  * @route   GET /api/zeng-markers
  * @access  Public
@@ -40,12 +40,13 @@ export const createZengMarker = asyncHandler(
       throw new ErrorResponse("A map location is required", 400);
     }
 
-    const needsContact = type === "boat" || type === "tractor";
+    const needsContact =
+      type === "boat" || type === "tractor" || type === "jcb";
     const contact =
       typeof contactNumber === "string" ? contactNumber.trim() : "";
     if (needsContact && !contact) {
       throw new ErrorResponse(
-        `A ${type === "boat" ? "boat" : "tractor"} driver contact number is required`,
+        `A ${type === "boat" ? "boat" : type === "tractor" ? "tractor" : "JCB"} driver contact number is required`,
         400,
       );
     }
