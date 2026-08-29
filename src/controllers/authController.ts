@@ -125,13 +125,60 @@ export const signup = asyncHandler(async (req: Request, res: Response) => {
 });
 
 /**
- * @desc    Log in (any role). Verifies the caller already completed
- *          Firebase phone-OTP verification client-side.
+ * Offline sign-in for a flood victim — the mirror of the signup bypass.
+ *
+ * Someone who registered with no signal has an account they can never get back
+ * into if every sign-in demands an SMS, so a bare `phone` is accepted here and
+ * no code is sent. The number is NOT proven by this, which is why:
+ *   - it is refused for any role but `Flood-Victim` (a Provider or the
+ *     Super-Admin must always complete a real OTP), and
+ *   - `isPhoneVerified` is left untouched — only a real OTP login sets it.
+ *
+ * The tradeoff is explicit: anyone who knows a victim's number can open that
+ * victim's account. A victim account holds only that person's own requests for
+ * relief, and locking a flood victim out of it is judged the worse failure.
+ */
+const loginVictimWithoutOtp = async (req: Request, res: Response) => {
+  const phone = normalizePhoneInput(req.body.phone, req.body.countryCode);
+
+  const user = await User.findOne({ phone });
+  if (!user) {
+    // Same structured signal as the OTP path, so the client can offer signup.
+    res.status(404).json({
+      success: false,
+      code: "NO_ACCOUNT",
+      message: "No account found for this phone number.",
+    });
+    return;
+  }
+  if (user.role !== "Flood-Victim") {
+    throw new ErrorResponse(
+      "This number is registered as a relief provider — please sign in with a code.",
+      403,
+    );
+  }
+  if (user.isDisabled) {
+    throw new ErrorResponse("Your account has been disabled", 403);
+  }
+
+  issueSession(user, 200, res);
+};
+
+/**
+ * @desc    Log in (any role). Normally verifies the caller already completed
+ *          Firebase phone-OTP verification client-side. A request with no
+ *          `idToken` takes the victim-only offline bypass above.
  * @route   POST /api/auth/login
  * @access  Public
  */
 export const login = asyncHandler(async (req: Request, res: Response) => {
   const { idToken } = req.body;
+
+  if (typeof idToken !== "string" || idToken.length === 0) {
+    await loginVictimWithoutOtp(req, res);
+    return;
+  }
+
   const { phone, uid } = await verifyPhoneToken(idToken);
 
   const user = await User.findOne({ phone });

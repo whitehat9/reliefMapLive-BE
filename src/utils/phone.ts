@@ -20,22 +20,31 @@ export interface PhoneCountry {
   readonly hint: string;
 }
 
-/** Nepal first — it is the deployment's primary country. */
+/**
+ * Any 10-digit national number is accepted under either dialling code.
+ *
+ * The per-country opening-digit rules (Nepal `96/97/98`, India `6–9`) were
+ * deliberately dropped: they rejected legitimate numbers — landlines, new
+ * ranges, test numbers — and a relief app turning someone away at signup is
+ * worse than storing a number that never receives SMS. Firebase still proves
+ * the number is real on the OTP path; this check only guards the shape.
+ *
+ * Nepal first — it is the deployment's primary country.
+ */
 export const SUPPORTED_COUNTRIES: readonly PhoneCountry[] = [
   {
     code: "+977",
     label: "Nepal",
-    // Nepali mobiles are 10 digits opening 96/97/98.
-    national: /^9[678]\d{8}$/,
-    hint: "10 digits starting 96, 97 or 98",
+    national: /^\d{10}$/,
+    hint: "10 digits",
   },
   {
     code: "+91",
     label: "India",
-    // Indian mobiles are 10 digits opening 6-9. Kept because the app was
-    // first deployed in Assam and those accounts still sign in.
-    national: /^[6-9]\d{9}$/,
-    hint: "10 digits starting 6–9",
+    // Kept because the app was first deployed in Assam and those accounts
+    // still sign in.
+    national: /^\d{10}$/,
+    hint: "10 digits",
   },
 ];
 

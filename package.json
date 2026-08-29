@@ -14,7 +14,8 @@
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix",
     "migrate:phone-e164": "tsx src/scripts/backfillPhoneE164.ts",
-    "migrate:victim-roles": "tsx src/scripts/backfillVictimRole.ts"
+    "migrate:victim-roles": "tsx src/scripts/backfillVictimRole.ts",
+    "seed:mock-relief": "tsx src/scripts/seedMockRelief.ts"
   },
   "keywords": [],
   "author": "",
