@@ -3,6 +3,7 @@ import asyncHandler from "express-async-handler";
 import Requirement, { REQUIREMENT_STATUSES } from "../model/Requirement.js";
 import User from "../model/User.js";
 import { ErrorResponse } from "../utils/errorResponse.js";
+import { normalizePhoneInput } from "../utils/phone.js";
 import { REQUIREMENT_ITEMS, type RequirementItem } from "../types/index.js";
 
 /** Keep only recognised requirement items, de-duplicated. */
@@ -24,6 +25,7 @@ export const createRequirement = asyncHandler(
       items: rawItems,
       message,
       phoneNumber,
+      countryCode,
       count,
       lat,
       lng,
@@ -34,12 +36,9 @@ export const createRequirement = asyncHandler(
     if (items.length === 0 && !trimmedMessage) {
       throw new ErrorResponse("Select what's needed or add a description", 400);
     }
-    if (!phoneNumber || !/^[6-9]\d{9}$/.test(String(phoneNumber).trim())) {
-      throw new ErrorResponse(
-        "Please provide a valid 10-digit phone number",
-        400,
-      );
-    }
+    // Accepts a full E.164 number, or bare national digits plus `countryCode`.
+    // Throws a 400 with a country-specific message when neither parses.
+    const normalizedPhone = normalizePhoneInput(phoneNumber, countryCode);
 
     const hasCoords = typeof lat === "number" && typeof lng === "number";
     if (!hasCoords) {
@@ -52,7 +51,7 @@ export const createRequirement = asyncHandler(
     const requirement = await Requirement.create({
       items,
       ...(trimmedMessage ? { message: trimmedMessage } : {}),
-      phoneNumber: String(phoneNumber).trim(),
+      phoneNumber: normalizedPhone,
       ...(typeof count === "number" ? { count } : {}),
       ...(hasCoords ? { lat, lng } : {}),
       createdBy: provider._id,
@@ -142,6 +141,7 @@ export const updateRequirement = asyncHandler(
       items: rawItems,
       message,
       phoneNumber,
+      countryCode,
       count,
       lat,
       lng,
@@ -156,13 +156,7 @@ export const updateRequirement = asyncHandler(
       throw new ErrorResponse("Select what's needed or add a description", 400);
     }
     if (phoneNumber !== undefined) {
-      if (!/^[6-9]\d{9}$/.test(String(phoneNumber).trim())) {
-        throw new ErrorResponse(
-          "Please provide a valid 10-digit phone number",
-          400,
-        );
-      }
-      requirement.phoneNumber = String(phoneNumber).trim();
+      requirement.phoneNumber = normalizePhoneInput(phoneNumber, countryCode);
     }
     if (typeof count === "number") requirement.count = count;
     if (typeof lat === "number") requirement.lat = lat;

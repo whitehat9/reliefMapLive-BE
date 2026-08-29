@@ -12,7 +12,8 @@ export const getUsers = asyncHandler(async (req: Request, res: Response) => {
   const filter: Record<string, unknown> = {};
   if (req.query.role) filter.role = req.query.role;
 
-  const users = await User.find(filter).sort("-createdAt");
+  // Never expose the Firebase uid — it is an auth-binding secret, not profile data.
+  const users = await User.find(filter).select("-firebaseUid").sort("-createdAt");
   res.status(200).json({ success: true, count: users.length, data: users });
 });
 
@@ -22,7 +23,7 @@ export const getUsers = asyncHandler(async (req: Request, res: Response) => {
  * @access  Private (Super-Admin)
  */
 export const getUser = asyncHandler(async (req: Request, res: Response) => {
-  const user = await User.findById(req.params.id);
+  const user = await User.findById(req.params.id).select("-firebaseUid");
   if (!user) throw new ErrorResponse("User not found", 404);
   res.status(200).json({ success: true, data: user });
 });

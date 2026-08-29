@@ -1,11 +1,17 @@
 /**
- * Seed Upper-Assam geography for multiple districts: revenue circles + villages.
+ * Seed Nepal geography for the flood-affected districts: the local units
+ * (municipalities / rural municipalities) under each, plus their settlements.
  *
  * Each district has a JSON file in ./geography/ shaped as
- * { "<Revenue Circle>": ["<village>", ...] }. A circle with an empty array is
- * still created (so revenue circles show up in dropdowns before their village
- * lists are filled in). The district name is taken from the DISTRICTS list
+ * { "<Municipality>": ["<settlement>", ...] }. A unit with an empty array is
+ * still created (so it shows up in dropdowns before its settlement list is
+ * filled in) — most rural municipalities start empty and are filled in by the
+ * Super-Admin locally. The district name is taken from the DISTRICTS list
  * below, not the filename.
+ *
+ * NOTE: the storage tier is still called `RevenueCircle` in the schema; for
+ * Nepal it holds the municipality / rural municipality. The UI labels it
+ * "Municipality".
  *
  * Idempotent: finds-or-creates each district, revenue circle, and village.
  * Village uniqueness is { district, revenueCircle, name }, so the same village
@@ -25,12 +31,20 @@ import VillageModel from "../model/Village.js";
 
 dotenv.config();
 
-/** District display name -> its geography JSON file (in ./geography). */
+/** District display name -> its geography JSON file (in ./geography).
+ * The Terai belt (Koshi/Narayani/Rapti/Karnali flood plains) plus the central
+ * hill districts around the Kathmandu valley. */
 const DISTRICTS: { name: string; file: string }[] = [
-  { name: "Sivasagar", file: "sivasagar.json" },
-  { name: "Charaideo", file: "charaideo.json" },
-  { name: "Jorhat", file: "jorhat.json" },
-  { name: "Golaghat", file: "golaghat.json" },
+  { name: "Kathmandu", file: "kathmandu.json" },
+  { name: "Lalitpur", file: "lalitpur.json" },
+  { name: "Bhaktapur", file: "bhaktapur.json" },
+  { name: "Makwanpur", file: "makwanpur.json" },
+  { name: "Chitwan", file: "chitwan.json" },
+  { name: "Sunsari", file: "sunsari.json" },
+  { name: "Saptari", file: "saptari.json" },
+  { name: "Banke", file: "banke.json" },
+  { name: "Bardiya", file: "bardiya.json" },
+  { name: "Kailali", file: "kailali.json" },
 ];
 
 const __dirname = dirname(fileURLToPath(import.meta.url));

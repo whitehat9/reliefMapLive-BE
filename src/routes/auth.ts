@@ -5,14 +5,17 @@ import {
   login,
   logout,
   getMe,
+  devLogin,
 } from "../controllers/authController.js";
 import { protect } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// Seed route (development only)
+// Development-only routes — never registered in production. `devLogin`
+// additionally refuses anything that isn't a loopback request.
 if (process.env.NODE_ENV === "development") {
   router.post("/seed", seedAdmin);
+  router.post("/dev-login", devLogin);
 }
 
 // Public provider — both verify a Firebase phone-OTP idToken client-side

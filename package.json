@@ -12,7 +12,9 @@
     "seed:geography": "tsx src/scripts/seedGeography.ts",
     "server": "tsx watch src/server.ts",
     "lint": "eslint . --ext .ts",
-    "lint:fix": "eslint . --ext .ts --fix"
+    "lint:fix": "eslint . --ext .ts --fix",
+    "migrate:phone-e164": "tsx src/scripts/backfillPhoneE164.ts",
+    "migrate:victim-roles": "tsx src/scripts/backfillVictimRole.ts"
   },
   "keywords": [],
   "author": "",
@@ -36,6 +38,7 @@
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^24.13.3",
+    "mongodb-memory-server": "^10.4.3",
     "nodemon": "^3.1.14",
     "ts-node": "^10.9.2",
     "tsx": "^4.23.1",

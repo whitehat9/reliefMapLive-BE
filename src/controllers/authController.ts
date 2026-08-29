@@ -1,9 +1,12 @@
 import type { Request, Response } from "express";
 import asyncHandler from "express-async-handler";
-import User, { type IUser } from "../model/User.js";
+import User, { type IUser, type UserRole } from "../model/User.js";
 import { ErrorResponse } from "../utils/errorResponse.js";
 import { verifyFirebaseIdToken } from "../config/firebaseAdmin.js";
-import { fromFirebasePhoneNumber } from "../utils/phone.js";
+import {
+  fromFirebasePhoneNumber,
+  normalizePhoneInput,
+} from "../utils/phone.js";
 
 /** Serialize a user for API responses (never leak firebaseUid). */
 const publicUser = (user: IUser) => ({
@@ -14,11 +17,13 @@ const publicUser = (user: IUser) => ({
   organizationName: user.organizationName,
   address: user.address,
   isDisabled: user.isDisabled,
+  isPhoneVerified: user.isPhoneVerified,
+  isFloodVictim: user.isFloodVictim,
 });
 
 /**
  * Verify a Firebase phone-auth ID token and return the caller's verified
- * phone number (bare 10-digit) and Firebase uid. Throws 400/401 on failure.
+ * phone number (E.164) and Firebase uid. Throws 400/401 on failure.
  */
 const verifyPhoneToken = async (
   idToken: unknown,
@@ -54,21 +59,48 @@ const issueSession = (user: IUser, statusCode: number, res: Response) => {
 };
 
 /**
- * @desc    Public provider self-registration. Verifies the caller already
- *          completed Firebase phone-OTP verification client-side, then
- *          creates a Provider (role is always forced, never taken from the
- *          body) and logs them straight in — no separate verification wait.
+ * @desc    Public self-registration. Two independent axes:
+ *
+ *          WHO  — `isFloodVictim: true` asks for the `Flood-Victim` role
+ *                 (someone requesting relief); omitted means `Provider`
+ *                 (someone delivering it).
+ *          HOW  — an `idToken` means Firebase phone-OTP was completed
+ *                 client-side and the verified number becomes their phone.
+ *                 Without one, a victim may send a bare `phone` instead: the
+ *                 offline bypass. Someone cut off in a flood often cannot
+ *                 receive an SMS (no signal, dead handset, borrowed number),
+ *                 so demanding a code would lock out exactly the people the
+ *                 app exists for. That number is UNVERIFIED, hence
+ *                 `isPhoneVerified:false` — `login` promotes them the first
+ *                 time they do sign in with a real code.
+ *
+ *          The bypass is victim-only; a Provider must always prove their
+ *          number. `role` is computed from a boolean and is NEVER read from
+ *          the body, so no request can mint a Super-Admin.
  * @route   POST /api/auth/signup
  * @access  Public
  */
 export const signup = asyncHandler(async (req: Request, res: Response) => {
-  const { idToken, name } = req.body;
+  const { idToken, name, isFloodVictim } = req.body;
 
   if (!name) {
     throw new ErrorResponse("Please provide a name", 400);
   }
 
-  const { phone, uid } = await verifyPhoneToken(idToken);
+  const wantsVictim = isFloodVictim === true;
+  const hasToken = typeof idToken === "string" && idToken.length > 0;
+
+  let phone: string;
+  let uid: string | undefined;
+
+  if (hasToken) {
+    ({ phone, uid } = await verifyPhoneToken(idToken));
+  } else if (wantsVictim) {
+    // Offline bypass — victims only, and only when no token was supplied.
+    phone = normalizePhoneInput(req.body.phone, req.body.countryCode);
+  } else {
+    throw new ErrorResponse("Please provide a verification token", 400);
+  }
 
   const existing = await User.findOne({ phone });
   if (existing) {
@@ -81,8 +113,12 @@ export const signup = asyncHandler(async (req: Request, res: Response) => {
   const user = await User.create({
     name,
     phone,
-    role: "Provider", // forced — self-signup can never create a Super-Admin
-    firebaseUid: uid,
+    // Derived from a boolean, never from a caller-supplied string: the only
+    // two reachable values are the public roles. Super-Admin stays seed-only.
+    role: wantsVictim ? "Flood-Victim" : "Provider",
+    isFloodVictim: wantsVictim, // legacy flag, kept in sync with the role
+    isPhoneVerified: Boolean(uid), // true only if a real OTP actually happened
+    ...(uid ? { firebaseUid: uid } : {}),
   });
 
   issueSession(user, 201, res);
@@ -126,6 +162,10 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
     throw new ErrorResponse("Invalid credentials", 401);
   }
 
+  // A successful OTP login proves the number — this is also how a flood-victim
+  // account that skipped OTP at signup becomes verified.
+  user.isPhoneVerified = true;
+
   // firebaseUid may have just been bound on first login — persist it.
   await user.save();
 
@@ -154,4 +194,68 @@ export const getMe = asyncHandler(async (req: Request, res: Response) => {
  */
 export const logout = asyncHandler(async (_req: Request, res: Response) => {
   res.status(200).json({ success: true, message: "Logged out" });
+});
+
+/**
+ * @desc    Developer sign-in bypass. Skips Firebase entirely and mints a
+ *          session for any phone number, creating the user if needed, so a
+ *          dev can get into a Provider or Super-Admin account without burning
+ *          real SMS quota.
+ *
+ *          Two independent locks, both required:
+ *            1. The route is only registered when NODE_ENV === "development"
+ *               (see routes/auth.ts) — it does not exist in production.
+ *            2. The request must originate from loopback (this guard) — so
+ *               even a dev server exposed on the LAN can't be bypassed from
+ *               another machine.
+ * @route   POST /api/auth/dev-login
+ * @access  Development only, localhost only
+ */
+export const devLogin = asyncHandler(async (req: Request, res: Response) => {
+  if (process.env.NODE_ENV !== "development") {
+    throw new ErrorResponse("Not found", 404);
+  }
+
+  const remote = req.socket.remoteAddress ?? "";
+  const isLoopback =
+    remote === "::1" ||
+    remote === "127.0.0.1" ||
+    remote === "::ffff:127.0.0.1" ||
+    remote.startsWith("127.");
+  if (!isLoopback) {
+    throw new ErrorResponse("Dev login is only available on localhost", 403);
+  }
+
+  const rawPhone =
+    typeof req.body.phone === "string" && req.body.phone.trim()
+      ? req.body.phone.trim()
+      : (process.env.SUPER_ADMIN_PHONE ?? "");
+  const phone = normalizePhoneInput(rawPhone, req.body.countryCode);
+
+  // Explicit allowlist rather than a cast — an unknown role falls back to the
+  // least-privileged option instead of being trusted.
+  const role: UserRole =
+    req.body.role === "Super-Admin"
+      ? "Super-Admin"
+      : req.body.role === "Flood-Victim"
+        ? "Flood-Victim"
+        : "Provider";
+
+  let user = await User.findOne({ phone });
+  if (!user) {
+    user = await User.create({
+      name:
+        typeof req.body.name === "string" && req.body.name.trim()
+          ? req.body.name.trim()
+          : `Dev ${role}`,
+      phone,
+      role,
+      isFloodVictim: role === "Flood-Victim",
+      isPhoneVerified: true,
+    });
+  } else if (user.isDisabled) {
+    throw new ErrorResponse("Your account has been disabled", 403);
+  }
+
+  issueSession(user, 200, res);
 });

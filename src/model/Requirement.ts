@@ -1,5 +1,6 @@
 import mongoose, { Schema, type Document, type Types } from "mongoose";
 import { REQUIREMENT_ITEMS, type RequirementItem } from "../types/index.js";
+import { E164_LOOSE } from "../utils/phone.js";
 
 /** Coordination lifecycle of a requirement on the shared board. */
 export const REQUIREMENT_STATUSES = ["open", "planning", "provided"] as const;
@@ -41,7 +42,7 @@ const RequirementSchema = new Schema<IRequirement>(
       type: String,
       required: [true, "Please add a phone number"],
       trim: true,
-      match: [/^[6-9]\d{9}$/, "Please provide a valid 10-digit phone number"],
+      match: [E164_LOOSE, "Please provide a valid phone number"],
     },
     count: { type: Number, min: 0 },
     lat: { type: Number, min: -90, max: 90 },
