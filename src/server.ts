@@ -6,7 +6,6 @@ import express, {
 import cors from "cors";
 
 import dotenv from "dotenv";
-import rateLimit from "express-rate-limit";
 import connectDB from "./config/dbConnection.js";
 import corsOptions from "./config/corOptions.js";
 import auth from "./routes/auth.js";
@@ -25,9 +24,8 @@ dotenv.config();
 const app: Application = express();
 const PORT = process.env.PORT || 8080;
 
-// Behind Cloud Run's proxy: trust the first proxy hop so req.secure reflects the
-// original HTTPS request and the rate limiter keys off the real client IP
-// (X-Forwarded-For) rather than the proxy's.
+// Behind Cloud Run's proxy: trust the first proxy hop so req.secure reflects
+// the original HTTPS request rather than the proxy's.
 app.set("trust proxy", 1);
 
 //CORS
@@ -37,14 +35,7 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Rate limiting
-const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  message: "Too many requests from this IP, please try again after 15 minutes",
-});
-
-// Health check endpoints (no rate limiting)
+// Health check endpoints
 app.get("/", (req: Request, res: Response) => {
   res.status(200).json({
     success: true,
@@ -59,9 +50,6 @@ app.get("/_ah/health", (req: Request, res: Response) => {
 app.get("/_ah/start", (req: Request, res: Response) => {
   res.status(200).send("OK");
 });
-
-// Apply rate limiter to all /api routes
-app.use("/api", apiLimiter);
 
 // Auth & user management
 app.use("/api/auth", auth);

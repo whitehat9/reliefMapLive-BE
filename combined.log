@@ -220,3 +220,26 @@
 {"level":"warn","message":"GET /api/needs/help-requests 403 — Forbidden: you do not have permission to perform this action","timestamp":"2026-08-29T02:01:46.780Z"}
 {"level":"warn","message":"GET /api/markers/marker 401 — Not authorized, no token provided","timestamp":"2026-08-29T02:17:58.941Z"}
 {"level":"warn","message":"GET /api/markers/marker 403 — Forbidden: you do not have permission to perform this action","timestamp":"2026-08-29T02:17:58.952Z"}
+{"level":"warn","message":"GET /api/auth/me 401 — Not authorized, user no longer exists","timestamp":"2026-08-29T03:11:39.688Z"}
+{"level":"warn","message":"GET /api/auth/me 401 — Not authorized, user no longer exists","timestamp":"2026-08-29T03:14:06.114Z"}
+{"level":"warn","message":"GET /api/auth/me 401 — Not authorized, user no longer exists","timestamp":"2026-08-29T03:21:04.613Z"}
+{"level":"warn","message":"POST /api/auth/dev-login 400 — Please provide a phone number","timestamp":"2026-08-29T03:31:21.667Z"}
+{"level":"warn","message":"POST /api/auth/dev-login 400 — Please provide a phone number","timestamp":"2026-08-29T03:31:52.289Z"}
+{"level":"warn","message":"POST /api/auth/dev-login 400 — Please provide a phone number","timestamp":"2026-08-29T03:32:42.806Z"}
+{"level":"warn","message":"GET /api/auth/me 401 — Not authorized, user no longer exists","timestamp":"2026-08-29T03:53:47.515Z"}
+{"level":"warn","message":"GET /api/needs/help-requests 401 — Not authorized, user no longer exists","timestamp":"2026-08-29T03:53:48.392Z"}
+{"level":"warn","message":"POST /api/auth/dev-login 400 — Please provide a phone number","timestamp":"2026-08-29T03:59:02.074Z"}
+{"level":"warn","message":"POST /api/auth/dev-login 400 — Enter a valid Nepal mobile number — 10 digits starting 96, 97 or 98","timestamp":"2026-08-29T03:59:11.710Z"}
+{"level":"warn","message":"POST /api/auth/dev-login 400 — Enter a valid Nepal mobile number — 10 digits starting 96, 97 or 98","timestamp":"2026-08-29T03:59:21.108Z"}
+{"level":"warn","message":"POST /api/auth/dev-login 400 — Enter a valid Nepal mobile number — 10 digits starting 96, 97 or 98","timestamp":"2026-08-29T04:02:57.627Z"}
+{"level":"warn","message":"POST /api/auth/dev-login 400 — Enter a valid Nepal mobile number — 10 digits starting 96, 97 or 98","timestamp":"2026-08-29T04:03:04.828Z"}
+{"level":"warn","message":"POST /api/auth/dev-login 400 — Enter a valid Nepal mobile number — 10 digits starting 96, 97 or 98","timestamp":"2026-08-29T05:11:05.561Z"}
+{"level":"warn","message":"POST /api/auth/dev-login 400 — Please provide a phone number","timestamp":"2026-08-29T05:11:32.080Z"}
+{"level":"warn","message":"POST /api/auth/dev-login 400 — Enter a valid Nepal mobile number — 10 digits starting 96, 97 or 98","timestamp":"2026-08-29T05:11:43.585Z"}
+{"level":"warn","message":"POST /api/auth/dev-login 400 — Enter a valid Nepal mobile number — 10 digits starting 96, 97 or 98","timestamp":"2026-08-29T05:12:07.100Z"}
+{"level":"warn","message":"POST /api/auth/dev-login 400 — Enter a valid Nepal mobile number — 10 digits starting 96, 97 or 98","timestamp":"2026-08-29T05:12:08.769Z"}
+{"level":"warn","message":"POST /api/auth/dev-login 400 — Enter a valid Nepal mobile number — 10 digits starting 96, 97 or 98","timestamp":"2026-08-29T05:12:10.058Z"}
+{"level":"warn","message":"POST /api/auth/dev-login 400 — Enter a valid Nepal mobile number — 10 digits starting 96, 97 or 98","timestamp":"2026-08-29T05:12:10.730Z"}
+{"level":"warn","message":"POST /api/auth/dev-login 400 — Enter a valid Nepal mobile number — 10 digits starting 96, 97 or 98","timestamp":"2026-08-29T05:12:15.744Z"}
+{"level":"warn","message":"POST /api/auth/dev-login 400 — Enter a valid Nepal mobile number — 10 digits starting 96, 97 or 98","timestamp":"2026-08-29T05:12:18.449Z"}
+{"level":"warn","message":"POST /api/auth/dev-login 400 — Enter a valid Nepal mobile number — 10 digits starting 96, 97 or 98","timestamp":"2026-08-29T05:12:20.407Z"}
